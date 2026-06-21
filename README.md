@@ -6,9 +6,8 @@
 ## How to use this tool?
 
 - Download CMake
-- Download Python 3.11 or higher
+- 
 - Run the tool
-  (If I’m right, you don’t need to install any extra Python modules because they’re built into Python.)
 - Select the ISO file you want to extract via the **Select ISO** button
 - Press the **Install and Extract** button
 - If extraction works, the files will appear in their own folder
