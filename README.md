@@ -21,7 +21,7 @@
 
 - It converts the selected ISO into XEX files and extracts them to the chosen folder
 
-## How to start the games?
+## How to start the games on Xbox 360?
 
 - Copy the extracted files to your Xbox 360 hard drive or USB drive
 
