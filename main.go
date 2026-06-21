@@ -17,10 +17,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-const (
-	REPO_URL = "https://github.com/XboxDev/extract-xiso.git"
-	REPO_DIR = "extract-xiso"
-)
+const REPO_URL = "https://github.com/XboxDev/extract-xiso.git"
 
 type XboxExtractor struct {
 	window    fyne.Window
@@ -40,6 +37,7 @@ func (x *XboxExtractor) log(text string) {
 
 func (x *XboxExtractor) browseISO() {
 	dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
+
 		if err != nil {
 			dialog.ShowError(err, x.window)
 			return
@@ -57,7 +55,7 @@ func (x *XboxExtractor) browseISO() {
 
 func (x *XboxExtractor) runCommand(cmd []string, cwd string) error {
 
-	x.log(fmt.Sprintf("\n$ %s\n\n", strings.Join(cmd, " ")))
+	x.log("\n$ " + strings.Join(cmd, " ") + "\n\n")
 
 	command := exec.Command(cmd[0], cmd[1:]...)
 
@@ -93,73 +91,12 @@ func (x *XboxExtractor) runCommand(cmd []string, cwd string) error {
 		}
 	}
 
-	if err := command.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return command.Wait()
 }
 
-func (x *XboxExtractor) installExtractXiso() (string, error) {
+func (x *XboxExtractor) extractISO(isoPath string) error {
 
-	binary := filepath.Join(
-		REPO_DIR,
-		"build",
-		"extract-xiso",
-	)
-
-	if _, err := os.Stat(binary); err == nil {
-		x.log("\nextract-xiso already installed.\n")
-		return filepath.Abs(binary)
-	}
-
-	x.log("\n=== INSTALLING extract-xiso ===\n")
-
-	if _, err := os.Stat(REPO_DIR); os.IsNotExist(err) {
-
-		err = x.runCommand([]string{
-			"git",
-			"clone",
-			REPO_URL,
-		}, "")
-
-		if err != nil {
-			return "", err
-		}
-	}
-
-	buildDir := filepath.Join(REPO_DIR, "build")
-
-	if err := os.MkdirAll(buildDir, 0755); err != nil {
-		return "", err
-	}
-
-	if err := x.runCommand(
-		[]string{"cmake", ".."},
-		buildDir,
-	); err != nil {
-		return "", err
-	}
-
-	if err := x.runCommand(
-		[]string{"make"},
-		buildDir,
-	); err != nil {
-		return "", err
-	}
-
-	if _, err := os.Stat(binary); err != nil {
-		return "", fmt.Errorf(
-			"build completed but extract-xiso was not found",
-		)
-	}
-
-	return filepath.Abs(binary)
-}
-
-func (x *XboxExtractor) extractISO(binary string, isoPath string) error {
-
-	x.log("\n=== EXTRACTING ISO ===\n")
+	x.log("\n=== PREPARING ===\n")
 
 	isoDir := filepath.Dir(isoPath)
 
@@ -173,27 +110,73 @@ func (x *XboxExtractor) extractISO(binary string, isoPath string) error {
 		isoName+" [Extracted]",
 	)
 
-	if err := os.MkdirAll(
+	repoDir := filepath.Join(
 		extractedFolder,
-		0755,
+		"extract-xiso",
+	)
+
+	buildDir := filepath.Join(
+		repoDir,
+		"build",
+	)
+
+	if err := os.MkdirAll(extractedFolder, 0755); err != nil {
+		return err
+	}
+
+	x.log("\nOutput Folder:\n" + extractedFolder + "\n")
+
+	x.log("\n=== CLONING extract-xiso ===\n")
+
+	if err := x.runCommand(
+		[]string{
+			"git",
+			"clone",
+			REPO_URL,
+			repoDir,
+		},
+		"",
 	); err != nil {
 		return err
 	}
 
-	x.log(
-		fmt.Sprintf(
-			"\nOutput folder:\n%s\n",
-			extractedFolder,
-		),
+	if err := os.MkdirAll(buildDir, 0755); err != nil {
+		return err
+	}
+
+	x.log("\n=== BUILDING ===\n")
+
+	if err := x.runCommand(
+		[]string{
+			"cmake",
+			"..",
+		},
+		buildDir,
+	); err != nil {
+		return err
+	}
+
+	if err := x.runCommand(
+		[]string{
+			"make",
+		},
+		buildDir,
+	); err != nil {
+		return err
+	}
+
+	binary := filepath.Join(
+		buildDir,
+		"extract-xiso",
 	)
 
-	before := map[string]bool{}
-
-	files, _ := os.ReadDir(isoDir)
-
-	for _, f := range files {
-		before[f.Name()] = true
+	if _, err := os.Stat(binary); err != nil {
+		return fmt.Errorf(
+			"extract-xiso binary not found after build",
+		)
 	}
+
+	x.log("\n=== EXTRACTING ISO ===\n")
 
 	if err := x.runCommand(
 		[]string{
@@ -201,42 +184,20 @@ func (x *XboxExtractor) extractISO(binary string, isoPath string) error {
 			"-x",
 			isoPath,
 		},
-		isoDir,
+		extractedFolder,
 	); err != nil {
 		return err
 	}
 
-	after, _ := os.ReadDir(isoDir)
+	x.log("\n=== CLEANING UP ===\n")
 
-	for _, f := range after {
-
-		if before[f.Name()] {
-			continue
-		}
-
-		src := filepath.Join(
-			isoDir,
-			f.Name(),
+	if err := os.RemoveAll(repoDir); err != nil {
+		x.log(
+			fmt.Sprintf(
+				"Could not remove repo folder: %v\n",
+				err,
+			),
 		)
-
-		if src == extractedFolder {
-			continue
-		}
-
-		dst := filepath.Join(
-			extractedFolder,
-			f.Name(),
-		)
-
-		if err := os.Rename(src, dst); err != nil {
-			x.log(
-				fmt.Sprintf(
-					"Could not move %s: %v\n",
-					f.Name(),
-					err,
-				),
-			)
-		}
 	}
 
 	x.log("\n=== DONE ===\n")
@@ -251,7 +212,9 @@ func (x *XboxExtractor) extractISO(binary string, isoPath string) error {
 
 func (x *XboxExtractor) worker() {
 
-	isoPath := x.isoEntry.Text
+	isoPath := strings.TrimSpace(
+		x.isoEntry.Text,
+	)
 
 	if isoPath == "" {
 		dialog.ShowError(
@@ -261,20 +224,19 @@ func (x *XboxExtractor) worker() {
 		return
 	}
 
-	binary, err := x.installExtractXiso()
+	if err := x.extractISO(isoPath); err != nil {
 
-	if err != nil {
-		dialog.ShowError(err, x.window)
-		return
-	}
+		x.log(
+			"\n\nERROR:\n" +
+				err.Error() +
+				"\n",
+		)
 
-	err = x.extractISO(
-		binary,
-		isoPath,
-	)
+		dialog.ShowError(
+			err,
+			x.window,
+		)
 
-	if err != nil {
-		dialog.ShowError(err, x.window)
 		return
 	}
 
@@ -289,15 +251,23 @@ func main() {
 
 	a := app.New()
 
-	w := a.NewWindow("Xbox ISO Extractor")
-	w.Resize(fyne.NewSize(900, 600))
+	w := a.NewWindow(
+		"Xbox ISO Extractor",
+	)
+
+	w.Resize(
+		fyne.NewSize(
+			900,
+			600,
+		),
+	)
 
 	isoEntry := widget.NewEntry()
 
 	logOutput := widget.NewMultiLineEntry()
 	logOutput.Disable()
 
-	extractor := &XboxExtractor{
+	app := &XboxExtractor{
 		window:    w,
 		isoEntry:  isoEntry,
 		logOutput: logOutput,
@@ -305,13 +275,13 @@ func main() {
 
 	browseBtn := widget.NewButton(
 		"Browse ISO",
-		extractor.browseISO,
+		app.browseISO,
 	)
 
 	extractBtn := widget.NewButton(
 		"Install + Extract",
 		func() {
-			go extractor.worker()
+			go app.worker()
 		},
 	)
 
@@ -331,7 +301,7 @@ func main() {
 		nil,
 		nil,
 		nil,
-		logOutput,
+		container.NewScroll(logOutput),
 	)
 
 	w.SetContent(content)
