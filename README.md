@@ -1,5 +1,8 @@
 # Xbox_Xixo_Extractor
 
+  **FIRST OF ALL ITS MOSTLY JUST A GUI FOR "extract-xixo" on github by XboxDev! 
+  The official git repo link here:
+    https://github.com/xboxdev/extract-xiso**
 ## How to use this tool?
 
 - Download CMake
