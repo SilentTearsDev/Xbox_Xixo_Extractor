@@ -6,7 +6,7 @@
 ## How to use this tool?
 
 - Download CMake
-- 
+- Open it in your code editor
 - Run the tool
 - Select the ISO file you want to extract via the **Select ISO** button
 - Press the **Install and Extract** button
