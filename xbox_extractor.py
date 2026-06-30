@@ -78,11 +78,7 @@ class XboxExtractor:
 
     def install_extract_xiso(self):
 
-        binary = os.path.join(
-            REPO_DIR,
-            "build",
-            "extract-xiso"
-        )
+        binary = os.path.join(REPO_DIR, "build", "extract-xiso")
 
         if os.path.exists(binary):
             self.log("\nextract-xiso already installed.\n")
