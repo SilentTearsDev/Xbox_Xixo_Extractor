@@ -22,18 +22,10 @@ class XboxExtractor:
         self.iso_entry = tk.Entry(top)
         self.iso_entry.pack(side="left", fill="x", expand=True)
 
-        browse_btn = tk.Button(
-            top,
-            text="Browse ISO",
-            command=self.browse_iso
-        )
+        browse_btn = tk.Button(top, text="Browse ISO", command=self.browse_iso)
         browse_btn.pack(side="left", padx=5)
 
-        extract_btn = tk.Button(
-            root,
-            text="Install + Extract",
-            command=self.start
-        )
+        extract_btn = tk.Button(root, text="Install + Extract", command=self.start)
         extract_btn.pack(pady=5)
 
         self.output = scrolledtext.ScrolledText(root)
@@ -45,10 +37,7 @@ class XboxExtractor:
         self.root.update_idletasks()
 
     def browse_iso(self):
-        filename = filedialog.askopenfilename(
-            title="Select Xbox ISO",
-            filetypes=[("ISO Files", "*.iso"), ("All Files", "*.*")]
-        )
+        filename = filedialog.askopenfilename(title="Select Xbox ISO", filetypes=[("ISO Files", "*.iso"), ("All Files", "*.*")])
 
         if filename:
             self.iso_entry.delete(0, tk.END)
@@ -58,13 +47,7 @@ class XboxExtractor:
 
         self.log(f"\n$ {' '.join(cmd)}\n\n")
 
-        process = subprocess.Popen(
-            cmd,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True
-        )
+        process = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
         for line in process.stdout:
             self.log(line)
@@ -72,9 +55,7 @@ class XboxExtractor:
         process.wait()
 
         if process.returncode != 0:
-            raise RuntimeError(
-                f"Command failed: {' '.join(cmd)}"
-            )
+            raise RuntimeError(f"Command failed: {' '.join(cmd)}")
 
     def install_extract_xiso(self):
 
@@ -87,11 +68,7 @@ class XboxExtractor:
         self.log("\n=== INSTALLING extract-xiso ===\n")
 
         if not os.path.exists(REPO_DIR):
-            self.run_command([
-                "git",
-                "clone",
-                REPO_URL
-            ])
+            self.run_command(["git", "clone", REPO_URL])
 
         build_dir = os.path.join(REPO_DIR, "build")
 
@@ -117,8 +94,7 @@ class XboxExtractor:
 
         os.makedirs(extracted_folder,exist_ok=True)
 
-        self.log(
-            f"\nOutput folder:\n{extracted_folder}\n")
+        self.log(f"\nOutput folder:\n{extracted_folder}\n")
 
         before = set(os.listdir(iso_dir))
 
@@ -135,20 +111,13 @@ class XboxExtractor:
                 continue
 
             try:
-                shutil.move(
-                    src,
-                    extracted_folder
-                )
+                shutil.move(src, extracted_folder)
             except Exception as e:
-                self.log(
-                    f"Could not move {item}: {e}\n"
-                )
+                self.log(f"Could not move {item}: {e}\n")
 
         self.log("\n=== DONE ===\n")
 
-        subprocess.Popen(
-            ["xdg-open", extracted_folder]
-        )
+        subprocess.Popen(["xdg-open", extracted_folder])
 
     def worker(self):
 
@@ -157,38 +126,22 @@ class XboxExtractor:
             iso_path = self.iso_entry.get()
 
             if not iso_path:
-                raise RuntimeError(
-                    "Please select an ISO first."
-                )
+                raise RuntimeError("Please select an ISO first.")
 
             binary = self.install_extract_xiso()
 
-            self.extract_iso(
-                binary,
-                iso_path
-            )
+            self.extract_iso(binary, iso_path)
 
-            messagebox.showinfo(
-                "Finished",
-                "Extraction completed!"
-            )
+            messagebox.showinfo("Finished", "Extraction completed!")
 
         except Exception as e:
 
-            self.log(
-                f"\n\nERROR:\n{e}\n"
-            )
+            self.log(f"\n\nERROR:\n{e}\n")
 
-            messagebox.showerror(
-                "Error",
-                str(e)
-            )
+            messagebox.showerror("Error", str(e))
 
     def start(self):
-        threading.Thread(
-            target=self.worker,
-            daemon=True
-        ).start()
+        threading.Thread(target=self.worker, daemon=True).start()
 
 
 root = tk.Tk()
